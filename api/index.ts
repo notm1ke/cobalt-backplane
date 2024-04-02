@@ -99,3 +99,5 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(process.env.PORT, () => console.log('Fitpulse ready on port 3000.'));
+
+export default app;

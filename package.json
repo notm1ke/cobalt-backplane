@@ -2,11 +2,11 @@
   "name": "fitpulse",
   "version": "1.0.0",
   "description": "",
-  "main": "src/app",
+  "main": "api/index",
   "scripts": {
-    "start": "ts-node src/app",
+    "start": "ts-node api/index",
     "build": "tsc",
-    "dev": "npx nodemon src/app.ts"
+    "dev": "npx nodemon api/index.ts"
   },
   "keywords": [],
   "author": "",
