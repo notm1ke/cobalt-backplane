@@ -73,7 +73,7 @@ export const getDailyStats = async (day: number, start = moment(START_DATES[day]
 
 export type WeeklyAverageKeypair = {
     time: string;
-    occupants: number
+    count: number
 };
 
 export const getWeeklyStats = async () => {
@@ -94,11 +94,11 @@ export const getWeeklyStats = async () => {
             .map(v => parseInt(v))
             .filter(v => !isNaN(v));
 
-        values.forEach((v: number, i: number) => days[i].values.push({ time, occupants: v }));
+        values.forEach((v: number, i: number) => days[i].values.push({ time, count: v }));
     }
 
     days.forEach(d => {
-        d.values.forEach(v => d.average += v.occupants);
+        d.values.forEach(v => d.average += v.count);
         d.average /= d.values.length;
     });
 
