@@ -1,14 +1,16 @@
+import moment from 'moment';
 import express from 'express';
 
 import { createClient } from '@supabase/supabase-js';
+import { getDailyStats, getWeeklyStats } from './lib/history';
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY)
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY || !process.env.SERVICE_KEY)
     throw new Error('Supabase environment variables missing.');
 
 const now = () => {
     let local = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
     let date = new Date(local);
- 
+
     return {
         day: date.getDay(),
         hour: date.getHours(),
@@ -20,12 +22,40 @@ const getNearestFiveMin = (mins: number) => Math.floor(mins / 5) * 5;
 
 const app = express();
 const client = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_KEY!
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_KEY!
 );
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.post('/history/daily', async (req, res) => {
+    if (!req.body || req.body.day === undefined || isNaN(req.body.day))
+        return res
+            .status(400)
+            .json({ message: 'Missing or invalid request body' });
+
+    let day = parseInt(req.body.day);
+    if (req.body.start) {
+        let start = moment(req.body.start);
+        let compatWeekday = start.weekday() - 1;
+        if (!start.isValid() || compatWeekday !== day)
+            return res
+                .status(400)
+                .json({ message: 'Invalid start date' });
+
+        let data = await getDailyStats(day, start);
+        return res.json({ data });
+    }
+
+    let data = await getDailyStats(day);
+    return res.json({ data });
+});
+
+app.post('/history/weekly', async (req, res) => {
+    let data = await getWeeklyStats();
+    return res.json({ data });
+});
 
 app.post('/metrics', async (req, res) => {
     if (!req.headers['x-ilefa-key'] || req.headers['x-ilefa-key'] !== process.env.SERVICE_KEY)
@@ -98,6 +128,6 @@ app.use((err, _req, res, _next) => {
         .json({ message: 'Internal Server Error' });
 });
 
-app.listen(process.env.PORT, () => console.log('Fitpulse ready on port 3000.'));
+app.listen(process.env.PORT || 3000, () => console.log('Fitpulse ready on port 3000.'));
 
 export default app;
