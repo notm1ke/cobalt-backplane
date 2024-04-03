@@ -94,6 +94,8 @@ app.post('/metrics', async (req, res) => {
     const { day, hour, mins } = now();
     const nearestMin = getNearestFiveMin(mins);
 
+    console.log({ count, day, hour, mins, nearestMin });
+
     const { data, error } = await client
         .from('rec')
         .select('count')
@@ -109,6 +111,8 @@ app.post('/metrics', async (req, res) => {
                 count, day, hour,
                 mins: nearestMin
             });
+
+        console.log({ error: error ?? 'no error' });
 
         if (error) return res
             .status(500)
