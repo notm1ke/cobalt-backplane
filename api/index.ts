@@ -61,8 +61,6 @@ app.post('/now', async (_req, res) => {
     const { day, hour, mins } = now();
     const nearestMin = getNearestFiveMin(mins);
 
-    console.log({ day, hour, mins, nearestMin });
-
     const { data, error } = await client
         .from('rec')
         .select('count')
@@ -74,9 +72,12 @@ app.post('/now', async (_req, res) => {
         .status(500)
         .json({ message: 'Failed to fetch record' });
 
+    let { count } = data[0];
+    if (!count) count = 0;
+
     return res
         .status(200)
-        .json({ data: data[0] ?? 0 }); 
+        .json({ count }); 
 });
 
 app.post('/metrics', async (req, res) => {
@@ -94,8 +95,6 @@ app.post('/metrics', async (req, res) => {
     const { day, hour, mins } = now();
     const nearestMin = getNearestFiveMin(mins);
 
-    console.log({ count, day, hour, mins, nearestMin });
-
     const { data, error } = await client
         .from('rec')
         .select('count')
@@ -111,8 +110,6 @@ app.post('/metrics', async (req, res) => {
                 count, day, hour,
                 mins: nearestMin
             });
-
-        console.log({ error: error ?? 'no error' });
 
         if (error) return res
             .status(500)
