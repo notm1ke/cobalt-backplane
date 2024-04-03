@@ -80,10 +80,7 @@ export const getWeeklyStats = async () => {
     let data = await client
         .get(url(`/values/Average!A2:H66`))
         .then(res => res.data.values)
-        .catch(_ => {
-            console.error(_, _.response.data);
-            return [];
-        });
+        .catch(_ => []);
 
     let days = DAYS.map(day => ({
         day,
