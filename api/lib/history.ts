@@ -49,9 +49,9 @@ export const getDailyStats = async (day: number, start = moment(START_DATES[day]
             if (i > 0) date.add(1, 'week');
 
             // compile records
-            let hourStart = moment(date).set({ hour: 6, minute: 15, second: 0 });
+            let hourStart = moment(date).set({ hour: 6, minute: 0, second: 0 });
             let records = day.map((record, i) => {
-                let time = hourStart.clone().add(i * 5, 'minutes');
+                let time = hourStart.clone().add(i * 15, 'minutes');
                 let am = time.hours() < 12;
                 let str = `${time.hours()}:${time.minutes() < 10 ? '0' + time.minutes() : time.minutes()} ${am ? 'AM' : 'PM'}`;
 
@@ -66,7 +66,7 @@ export const getDailyStats = async (day: number, start = moment(START_DATES[day]
                 records
             };
         }))
-        .catch(_ => []);
+        .catch(_ => console.error(_));
 
     return data;
 }

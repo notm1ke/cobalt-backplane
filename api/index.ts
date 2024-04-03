@@ -18,13 +18,17 @@ const now = () => {
     };
 }
 
-const getNearestFiveMin = (mins: number) => Math.floor(mins / 5) * 5;
+const getNearest15Min = (mins: number) => prependZero(Math.floor(mins / 15) * 15);
+
+const prependZero = (num: number) => num < 10 ? `0${num}` : num;
 
 const app = express();
 const client = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_KEY!
 );
+
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -59,7 +63,7 @@ app.post('/history/weekly', async (req, res) => {
 
 app.post('/now', async (_req, res) => {
     const { day, hour, mins } = now();
-    const nearestMin = getNearestFiveMin(mins);
+    const nearestMin = getNearest15Min(mins);
 
     const { data, error } = await client
         .from('rec')
@@ -71,6 +75,11 @@ app.post('/now', async (_req, res) => {
     if (error) return res
         .status(500)
         .json({ message: 'Failed to fetch record' });
+
+    if (!data || data.length === 0)
+        return res
+            .status(200)
+            .json({ count: 0 });
 
     let { count } = data[0];
     if (!count) count = 0;
@@ -93,7 +102,7 @@ app.post('/metrics', async (req, res) => {
 
     const { count } = req.body;
     const { day, hour, mins } = now();
-    const nearestMin = getNearestFiveMin(mins);
+    const nearestMin = getNearest15Min(mins);
 
     const { data, error } = await client
         .from('rec')
@@ -151,6 +160,6 @@ app.use((err, _req, res, _next) => {
         .json({ message: 'Internal Server Error' });
 });
 
-app.listen(process.env.PORT || 3000, () => console.log('Fitpulse ready on port 3000.'));
+app.listen(port, () => console.log(`Fitpulse ready on port ${port}.`));
 
 export default app;
