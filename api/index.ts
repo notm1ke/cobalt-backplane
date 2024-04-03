@@ -89,6 +89,35 @@ app.post('/now', async (_req, res) => {
         .json({ count }); 
 });
 
+app.post('/today', async (req, res) => {
+    const { day } = now();
+    const { data, error } = await client
+        .from('rec')
+        .select('*')
+        .eq('day', day);
+
+    if (error) return res
+        .status(500)
+        .json({ message: 'Failed to fetch record' });
+    
+    let patched = data
+        .sort((a, b) => {
+            if (a.hour === b.hour)
+                return a.mins - b.mins;
+            return a.hour - b.hour;
+        })
+        .map(item => {
+            let am = item.hour < 12 ? 'AM' : 'PM';
+            let hour = item.hour > 12 ? item.hour - 12 : item.hour;
+            let time = `${hour}:${prependZero(item.mins)} ${am}`;
+            let count = item.count;
+
+            return { time, count }
+        });
+
+    return res.json({ data: patched });
+});
+
 app.post('/metrics', async (req, res) => {
     if (!req.headers['x-ilefa-key'] || req.headers['x-ilefa-key'] !== process.env.SERVICE_KEY)
         return res
