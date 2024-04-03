@@ -57,6 +57,28 @@ app.post('/history/weekly', async (req, res) => {
     return res.json({ data });
 });
 
+app.post('/now', async (_req, res) => {
+    const { day, hour, mins } = now();
+    const nearestMin = getNearestFiveMin(mins);
+
+    console.log({ day, hour, mins, nearestMin });
+
+    const { data, error } = await client
+        .from('rec')
+        .select('count')
+        .eq('day', day)
+        .eq('hour', hour)
+        .eq('mins', nearestMin);
+
+    if (error) return res
+        .status(500)
+        .json({ message: 'Failed to fetch record' });
+
+    return res
+        .status(200)
+        .json({ data: data[0] ?? 0 }); 
+});
+
 app.post('/metrics', async (req, res) => {
     if (!req.headers['x-ilefa-key'] || req.headers['x-ilefa-key'] !== process.env.SERVICE_KEY)
         return res
