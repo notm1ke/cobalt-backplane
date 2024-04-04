@@ -14,6 +14,21 @@ const client = axios.create({
 // api url helper
 const url = (path: string) => `${path}${path.includes('?') ? '&' : '?'}key=${API_TOKEN}`;
 
+export const now = () => {
+    let local = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    let date = new Date(local);
+
+    return {
+        day: date.getDay(),
+        hour: date.getHours(),
+        mins: date.getMinutes()
+    };
+}
+
+export const getNearest15Min = (mins: number) => prependZero(Math.floor(mins / 15) * 15);
+
+export const prependZero = (num: number) => num < 10 ? `0${num}` : num;
+
 export const calculateStartOffset = (start: moment.Moment): [number, string] => {
     let offset = 0;
     let day = start.weekday() - 1;
@@ -71,7 +86,7 @@ export const getDailyStats = async (day: number, start = moment(START_DATES[day]
     return data;
 }
 
-export type WeeklyAverageKeypair = {
+export type OccupantRecord = {
     time: string;
     count: number
 };
@@ -84,7 +99,7 @@ export const getWeeklyStats = async () => {
 
     let days = DAYS.map(day => ({
         day,
-        values: Array<WeeklyAverageKeypair>(),
+        values: Array<OccupantRecord>(),
         average: 0
     }));
 
@@ -103,4 +118,40 @@ export const getWeeklyStats = async () => {
     });
 
     return days;
+}
+
+export const findTrendFitMultiplier = (today: OccupantRecord[], avgs: OccupantRecord[]) => {
+    let bestMultiplier = 1;
+    let bestDiff = Infinity;
+
+    for (let i = 0.1; i <= 2; i += 0.1) {
+        let diff = avgs.reduce((acc, avg) => {
+            let live = today.find(live => live.time === avg.time);
+            if (!live) return acc;
+
+            let diff = Math.abs(live.count - (avg.count * i));
+            return acc + diff;
+        }, 0);
+
+        if (diff < bestDiff) {
+            bestDiff = diff;
+            bestMultiplier = i;
+        }
+    }
+
+    return bestMultiplier;
+}
+
+export const getAdjustedAvgLine = (today: OccupantRecord[], avgs: OccupantRecord[]) => {
+    let multiplier = findTrendFitMultiplier(today, avgs);
+    return avgs.map(avg => ({ ...avg, count: Math.round(avg.count * multiplier) }));
+}
+
+export const getTodayFittedAverage = async (live: OccupantRecord[]) => {
+    let day = moment().format('dddd');
+    let stats = await getWeeklyStats();
+    let avg = stats.find(s => s.day === day);
+    if (!avg) return [];
+
+    return getAdjustedAvgLine(live, avg.values);
 }

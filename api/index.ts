@@ -2,25 +2,18 @@ import moment from 'moment';
 import express from 'express';
 
 import { createClient } from '@supabase/supabase-js';
-import { getDailyStats, getWeeklyStats } from './lib/history';
+
+import {
+    getDailyStats,
+    getNearest15Min,
+    getTodayFittedAverage,
+    getWeeklyStats,
+    now,
+    prependZero
+} from './lib';
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY || !process.env.SERVICE_KEY)
     throw new Error('Supabase environment variables missing.');
-
-const now = () => {
-    let local = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
-    let date = new Date(local);
-
-    return {
-        day: date.getDay(),
-        hour: date.getHours(),
-        mins: date.getMinutes()
-    };
-}
-
-const getNearest15Min = (mins: number) => prependZero(Math.floor(mins / 15) * 15);
-
-const prependZero = (num: number) => num < 10 ? `0${num}` : num;
 
 const app = express();
 const client = createClient(
@@ -86,7 +79,7 @@ app.post('/now', async (_req, res) => {
 
     return res
         .status(200)
-        .json({ count }); 
+        .json({ count });
 });
 
 app.post('/today', async (req, res) => {
@@ -99,7 +92,7 @@ app.post('/today', async (req, res) => {
     if (error) return res
         .status(500)
         .json({ message: 'Failed to fetch record' });
-    
+
     let patched = data
         .sort((a, b) => {
             if (a.hour === b.hour)
@@ -116,6 +109,36 @@ app.post('/today', async (req, res) => {
         });
 
     return res.json({ data: patched });
+});
+
+app.post('/today/avg', async (req, res) => {
+    const { day } = now();
+    const { data, error } = await client
+        .from('rec')
+        .select('*')
+        .eq('day', day);
+
+    if (error) return res
+        .status(500)
+        .json({ message: 'Failed to fetch record' });
+
+    let patched = data
+        .sort((a, b) => {
+            if (a.hour === b.hour)
+                return a.mins - b.mins;
+            return a.hour - b.hour;
+        })
+        .map(item => {
+            let am = item.hour < 12 ? 'AM' : 'PM';
+            let hour = item.hour > 12 ? item.hour - 12 : item.hour;
+            let time = `${hour}:${prependZero(item.mins)} ${am}`;
+            let count = item.count;
+
+            return { time, count }
+        });
+
+    let adjusted = await getTodayFittedAverage(patched);
+    return res.json({ data: adjusted });
 });
 
 app.post('/metrics', async (req, res) => {
