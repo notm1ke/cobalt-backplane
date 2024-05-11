@@ -11,7 +11,6 @@ const client = axios.create({
     baseURL: `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`,
 });
 
-// api url helper
 const url = (path: string) => `${path}${path.includes('?') ? '&' : '?'}key=${API_TOKEN}`;
 
 export const now = () => {
